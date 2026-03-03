@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿微信网页版</title>
+    <style>
+        /* 整体布局 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        .wechat-container {
+            width: 1000px;
+            height: 600px;
+            margin: 50px auto;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* 左侧联系人列表 */
+        .contact-list {
+            width: 280px;
+            height: 100%;
+            border-right: 1px solid #e5e5e5;
+            background: #f7f7f7;
+        }
+        .contact-item {
+            height: 60px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .contact-item:hover {
+            background: #e9e9e9;
+        }
+        .contact-item.active {
+            background: #d3eafc;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #07c160;
+            color: white;
+            text-align: center;
+            line-height: 40px;
+            font-size: 18px;
+            margin-right: 10px;
+        }
+        .contact-name {
+            font-size: 16px;
+            color: #333;
+        }
+
+        /* 右侧聊天窗口 */
+        .chat-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+            background: #f7f7f7;
+        }
+        .chat-content {
+            flex: 1;
+            padding: 20px;
+            background: #f0f0f0;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+        .message.me {
+            margin-left: auto;
+        }
+        .message-content {
+            padding: 8px 12px;
+            border-radius: 8px;
+            word-wrap: break-word;
+        }
+        .message.other .message-content {
+            background: white;
+            border: 1px solid #eee;
+        }
+        .message.me .message-content {
+            background: #07c160;
+            color: white;
+        }
+
+        /* 底部输入框 */
+        .chat-input {
+            height: 60px;
+            padding: 10px 20px;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            background: white;
+        }
+        #messageInput {
+            flex: 1;
+            height: 40px;
+            padding: 0 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            outline: none;
+            font-size: 14px;
+        }
+        #sendBtn {
+            width: 80px;
+            height: 40px;
+            margin-left: 10px;
+            background: #07c160;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #sendBtn:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="wechat-container">
+        <!-- 左侧联系人列表 -->
+        <div class="contact-list">
+            <div class="contact-item active" data-name="张三">
+                <div class="avatar">张</div>
+                <div class="contact-name">张三</div>
+            </div>
+            <div class="contact-item" data-name="李四">
+                <div class="avatar">李</div>
+                <div class="contact-name">李四</div>
+            </div>
+            <div class="contact-item" data-name="王五">
+                <div class="avatar">王</div>
+                <div class="contact-name">王五</div>
+            </div>
+        </div>
+
+        <!-- 右侧聊天窗口 -->
+        <div class="chat-window">
+            <div class="chat-header">
+                <div class="avatar">张</div>
+                <div class="contact-name" id="currentContact">张三</div>
+            </div>
+            <div class="chat-content" id="chatContent">
+                <!-- 聊天消息会通过JS动态生成 -->
+                <div class="message other">
+                    <div class="message-content">你好呀～</div>
+                </div>
+                <div class="message me">
+                    <div class="message-content">哈喽！</div>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="请输入消息...">
+                <button id="sendBtn" disabled>发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 获取页面元素
+        const contactItems = document.querySelectorAll('.contact-item');
+        const currentContact = document.getElementById('currentContact');
+        const chatContent = document.getElementById('chatContent');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // 2. 前端验证：输入框为空时禁用发送按钮（咱们之前聊的前端验证逻辑）
+        messageInput.addEventListener('input', function() {
+            // 去掉首尾空格，判断是否为空
+            const content = this.value.trim();
+            sendBtn.disabled = content === '';
+        });
+
+        // 3. 切换联系人逻辑
+        contactItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有active样式
+                contactItems.forEach(i => i.classList.remove('active'));
+                // 给当前点击的联系人加active
+                this.classList.add('active');
+                // 更新聊天窗口标题
+                const name = this.dataset.name;
+                currentContact.textContent = name;
+                // 更新头像（简单处理）
+                document.querySelector('.chat-header .avatar').textContent = name.charAt(0);
+                // 清空聊天记录（模拟切换联系人）
+                chatContent.innerHTML = `<div class="message other"><div class="message-content">你好，我是${name}～</div></div>`;
+            });
+        });
+
+        // 4. 发送消息逻辑
+        sendBtn.addEventListener('click', sendMessage);
+        // 按回车也能发送
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 发送消息核心函数
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            // 二次验证（前端双层校验，后端还会再校验）
+            if (content === '') return;
+
+            // 创建自己的消息元素
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message me';
+            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            chatContent.appendChild(messageDiv);
+
+            // 清空输入框，禁用发送按钮
+            messageInput.value = '';
+            sendBtn.disabled = true;
+
+            // 模拟对方回复（2秒后）
+            const currentName = currentContact.textContent;
+            setTimeout(() => {
+                const replyDiv = document.createElement('div');
+                replyDiv.className = 'message other';
+                replyDiv.innerHTML = `<div class="message-content">${currentName}收到：${content}</div>`;
+                chatContent.appendChild(replyDiv);
+                // 滚动到最新消息
+                chatContent.scrollTop = chatContent.scrollHeight;
+            }, 2000);
+
+            // 滚动到最新消息
+            chatContent.scrollTop = chatContent.scrollHeight;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>XFL的猜数字游戏</title>
+    <style>
+        /* 皇室风格页面样式 */
+        body {
+            background: #0a192f;
+            color: #e6f1ff;
+            font-family: "Microsoft YaHei", sans-serif;
+            text-align: center;
+            padding-top: 100px;
+            font-size: 20px;
+        }
+        h1 {
+            background: linear-gradient(90deg, #ffd700, #fff8dc);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-size: 40px;
+        }
+        button {
+            background: #ffd700;
+            color: #0a192f;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #ffd700;
+        }
+
+
+
+    </style>
+</head>
+<body>
+
+
+    <h1>🎯 XFL的猜数字游戏</h1>
+    <p>点击下方按钮开始游戏（数字范围：1-100）</p>
+    <button onclick="startGame()">开始猜数字</button>
+
+    <script>
+        // 猜数字游戏核心函数
+        function startGame() {
+            // 1. 生成1-100的随机数（核心：Math随机数用法）
+            const targetNumber = Math.floor(Math.random() * 100) + 1;
+            // 记录猜的次数
+            let guessCount = 0;
+            // 存储用户输入的数字
+            let userGuess;
+
+            // 2. 循环猜数字（核心：while循环）
+            while (true) {
+                // 弹出输入框，获取用户输入（核心：prompt交互）
+                userGuess = prompt("🎭 请输入您猜测的数字（1-100），输入'退出'结束游戏：");
+
+                // 处理退出逻辑
+                if (userGuess === null || userGuess === "退出") {
+                    alert("👑 公主殿下下次再来挑战！答案是：" + targetNumber);
+                    break;
+                }
+
+                // 转换为数字类型（核心：数据类型转换）
+                userGuess = Number(userGuess);
+                guessCount++;
+
+                // 验证输入是否合法（核心：条件判断）
+                if (isNaN(userGuess) || userGuess < 1 || userGuess > 100) {
+                    alert("⚠️ 请输入1-100之间的有效数字！");
+                    continue;
+                }
+
+                // 猜数字逻辑
+                if (userGuess > targetNumber) {
+                    alert(`📉 猜大了！您已经猜了 ${guessCount} 次，再试试～`);
+                } else if (userGuess < targetNumber) {
+                    alert(`📈 猜小了！您已经猜了 ${guessCount} 次，再试试～`);
+                } else {
+                    // 猜对了，结束循环
+                    alert(`🎉 恭喜公主殿下猜对了！答案就是 ${targetNumber}
+您一共猜了 ${guessCount} 次
+${guessCount <= 5 ? "🏆 太厉害了！不愧是您！" : guessCount <= 10 ? "👍 很棒哦！" : "💪 继续加油～"}`);
+
+                    // 询问是否重来（核心：confirm交互）
+                    const playAgain = confirm("👑 是否再来一局？");
+                    if (playAgain) {
+                        startGame(); // 递归调用，重新开始游戏
+                    } else {
+                        alert("👋 游戏结束，期待公主殿下再次光临！");
+                    }
+                    break;
+                }
+            }
+        }
+
+
+
+    </script>
+</body>
+</html>
