@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记忆配对小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f8ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .score {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        /* 卡牌容器：改为 4 列布局 */
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(4, 80px); /* 关键修改：4列 */
+            gap: 10px;
+            max-width: 600px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* 卡牌容器，用于3D翻转 */
+        .card {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+
+        /* 卡牌翻面 */
+        .card.open {
+            transform: rotateY(180deg);
+        }
+
+        /* 配对成功 */
+        .card.match {
+            transform: rotateY(180deg);
+            pointer-events: none;
+        }
+
+        /* 卡牌正面和背面共用样式 */
+        .card-face {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            border-radius: 8px;
+            backface-visibility: hidden; /* 隐藏背面 */
+        }
+
+        /* 卡牌背面（初始状态） */
+        .card-back {
+            background-color: #4169e1;
+            color: white;
+        }
+
+        /* 卡牌正面（翻牌后显示） */
+        .card-front {
+            background-color: #ff6347;
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        /* 配对成功后的正面颜色 */
+        .card.match .card-front {
+            background-color: #32cd32;
+        }
+
+        /* 重置按钮 */
+        #reset-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #reset-btn:hover {
+            background-color: #1976d2;
+        }
+
+        /* 手机端适配：保持 4 列，调整卡牌大小 */
+        @media (max-width: 400px) {
+            .card-container {
+                grid-template-columns: repeat(4, 70px);
+            }
+            .card {
+                width: 70px;
+                height: 70px;
+            }
+            .card-face {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>记忆配对小游戏 </h1>
+    <div class="score">翻牌次数：<span id="moves">0</span></div>
+    <div class="card-container" id="cardContainer"></div>
+    <button id="reset-btn">重新开始</button>
+
+    <script>
+        // 1. 定义卡牌图标
+        const icons = ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓'];
+        // 2. 游戏变量
+        let cards = [];
+        let openCards = [];
+        let moves = 0;
+        let matchedPairs = 0;
+        let lockBoard = false;
+
+        // 3. 获取DOM元素
+        const cardContainer = document.getElementById('cardContainer');
+        const movesElement = document.getElementById('moves');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // 4. 初始化游戏
+        function initGame() {
+            cards = [];
+            openCards = [];
+            moves = 0;
+            matchedPairs = 0;
+            lockBoard = false;
+            movesElement.textContent = moves;
+            cardContainer.innerHTML = '';
+
+            // 生成卡牌对（8个图标，共16张）
+            const cardIcons = [...icons, ...icons];
+            // 洗牌
+            shuffle(cardIcons);
+
+            // 创建卡牌元素
+            cardIcons.forEach((icon, index) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.icon = icon;
+                card.dataset.index = index;
+
+                // 创建背面
+                const cardBack = document.createElement('div');
+                cardBack.classList.add('card-face', 'card-back');
+                cardBack.textContent = '?'; // 背面显示问号
+
+                // 创建正面
+                const cardFront = document.createElement('div');
+                cardFront.classList.add('card-face', 'card-front');
+                cardFront.textContent = icon; // 正面显示图标
+
+                // 组装卡牌
+                card.appendChild(cardBack);
+                card.appendChild(cardFront);
+
+                card.addEventListener('click', flipCard);
+                cardContainer.appendChild(card);
+            });
+        }
+
+        // 5. 洗牌函数
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex > 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // 6. 翻牌逻辑
+        function flipCard() {
+            if (lockBoard) return;
+            const card = this;
+
+            if (card === openCards[0] || card.classList.contains('open') || card.classList.contains('match')) {
+                return;
+            }
+
+            card.classList.add('open');
+            openCards.push(card);
+
+            moves++;
+            movesElement.textContent = moves;
+
+            if (openCards.length === 2) {
+                lockBoard = true;
+                checkForMatch();
+            }
+        }
+
+        // 7. 检查配对
+        function checkForMatch() {
+            const [card1, card2] = openCards;
+            if (card1.dataset.icon === card2.dataset.icon) {
+                card1.classList.add('match');
+                card2.classList.add('match');
+                openCards = [];
+                lockBoard = false;
+
+                if (matchedPairs === 7) { // 8对，索引从0开始
+                    setTimeout(() => {
+                        alert(`恭喜！你用了${moves}步完成配对🎉`);
+                    }, 500);
+                }
+                matchedPairs++;
+            } else {
+                setTimeout(() => {
+                    card1.classList.remove('open');
+                    card2.classList.remove('open');
+                    openCards = [];
+                    lockBoard = false;
+                }, 800);
+            }
+        }
+
+        // 8. 重新开始游戏
+        resetBtn.addEventListener('click', initGame);
+
+        // 初始化游戏
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
